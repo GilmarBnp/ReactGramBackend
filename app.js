@@ -28,5 +28,5 @@ const router = require("./routes/Router.js");
 app.use(router);
 
 app.listen(port,()=> {
-    console.log(`O App rodando na porta ${port}`);
+    console.log(`O App está rodando na porta ${port}`);
 })
