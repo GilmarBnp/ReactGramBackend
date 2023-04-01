@@ -15,8 +15,8 @@ app.use(express.urlencoded({extended:false}));
 //Solve CORS
 app.use(cors({credentials: true, origin: "http://localhost:3000"}));
 
-//Uploud diretory
-app.use("/uplouds", express.static(path.join(__dirname, "/uplouds")));
+//Upload diretory
+app.use('/uploads', express.static('uploads'));
 
 //DB connection
 require("./config/db.js")
@@ -29,4 +29,5 @@ app.use(router);
 
 app.listen(port,()=> {
     console.log(`O App está rodando na porta ${port}`);
+
 })
