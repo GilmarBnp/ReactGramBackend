@@ -2,7 +2,6 @@ const Photo = require("../models/Photo")
 const User = require("../models/User")
 const fs = require('fs')
 
-
 const mongoose = require("mongoose")
 
 // Insert a photo, with an user related to it
@@ -76,6 +75,8 @@ const getAllPhotos = async(req, res) => {
     const photos = await Photo.find({})
     .sort([["createdAt", -1]])
     .exec()
+
+    photos.reverse();
     return res.status(200).json(photos)
 }
 // Get user photos
@@ -83,7 +84,42 @@ const getUserPhotos = async(req, res) => {
     const {id} = req.params
 
     const photos = await Photo.find({userId: id}).sort([["createdAt", -1]]).exec();
+    
+    photos.reverse();
+
     return res.status(200).json(photos);
+}
+
+//get likes
+const getPhotoLikes = async (req, res) => {
+
+  const {id} = req.params
+  const photo = await Photo.findById(mongoose.Types.ObjectId(id))
+  const likes = photo.likes
+  
+  // Check if photo exists
+  if(!photo) {
+      res.status(404).json({errors: ["Foto não encontrada."]})
+      return;
+  }
+
+  res.status(200).json(likes)
+}
+
+//get likes from all photos
+const getPhotoLikesAll = async (req, res) => {
+
+  const photos = await Photo.find()
+
+  // Check if any photos exist
+  if(!photos || photos.length === 0) {
+      res.status(404).json({errors: ["Não foram encontradas fotos."]})
+      return;
+  }
+
+  const likes = photos.map(photo => photo.likes)
+
+  res.status(200).json({photoAllLikes: likes })
 }
 
 // Get photo by id
@@ -145,12 +181,13 @@ const getPhotoById = async (req, res) => {
 
 // Like functionality
 const likePhoto = async(req, res) => {
-    const {id} = req.params
+    const {id} = req.params;
 
-    reqUser = req.user
+    reqUser = req.user;
 
-    const currentUser = await User.findById(mongoose.Types.ObjectId(reqUser._id))
-    const photo = await Photo.findById(id)
+    const currentUser = await User.findById(mongoose.Types.ObjectId(reqUser._id));
+    
+    const photo = await Photo.findById(id);
 
     // Check if photo exist
     if(!photo) {
@@ -159,30 +196,27 @@ const likePhoto = async(req, res) => {
     }
 
   // If the user click again, remove like
-    if(photo.likes.includes(currentUser._id)) {
-     const othersLike = await photo.likes.filter((like) => {//this const take all likes of the photo on photo like array
-     return !currentUser.equals(currentUser._id)//return all others likes except for currentUser like, returns all likes less a own user like
-    })
-
-     photo.likes = [...othersLike]//put back a photo.likes array in a initial state, no likes
-        
-     photo.save();//save the initial state, without userPhoto id
-        
-     return res.status(200).json({photo, message: "Foto descurtida."})
-    }
-
-    // Put a user id in likes array
-     photo.likes.push(currentUser._id);
-
-     photo.save();
-
-    res.status(200).json({
-        photoId: id, 
-        userId: reqUser._id, 
-        userName: currentUser.userName, 
-        message:"Foto curtida."
-    })
-}
+  if (photo.likes.includes(currentUser._id)) {
+    photo.likes = photo.likes.filter((like) => !like.equals(currentUser._id)
+    );
+    
+    await photo.save();
+   
+    return res.status(200).json({ photo, message: "Foto descurtida." });
+  }else {
+    photo.likes = photo.likes.concat(currentUser._id);
+    
+    await photo.save();
+    
+    return res.status(200).json({
+      photoId: id,
+      userId: currentUser._id,
+      userName: currentUser.userName,
+      message: "Foto curtida.",
+      likes: photo.likes
+    });
+  }
+  }
 
 // Comment funcionality
 const photoComment = async(req, res) => {
@@ -232,4 +266,6 @@ module.exports = {
     likePhoto,
     photoComment,
     searchPhotos,
+    getPhotoLikes,
+    getPhotoLikesAll,
 }
